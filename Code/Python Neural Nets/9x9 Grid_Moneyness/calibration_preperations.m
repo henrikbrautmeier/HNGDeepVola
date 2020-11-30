@@ -121,6 +121,7 @@ for j=2:51
     end
     [~,min_idx]= min(l2norm);
     [~,min_idx2]= min(mape);
+    loss(j) = min(mape)
     %figure 
     %heatmap(reshape(data_price(min_idx,15:end),9,9)')
     %figure 
@@ -139,5 +140,51 @@ for j=2:51
     data_2(j-1,:,:,:) = surface_forNN;
 end
 %save("2010_interpolatedgrid_full.mat","data_1");
-%save("2010_interpolatedgrid_mv.mat","data_2");
+save("2010_interpolatedgrid_mv.mat","data_2");
 save("2010_interpolatedgrid_filledvalues.mat","data_3","rates","data_vola");
+
+
+
+for j=2:51  
+    idx_cal = j;
+    data_week_tmp = data(:,(weeksprices == idx_cal))';
+    price_week_norm = S.*data_week_tmp(:,1)./data_week_tmp(:,4);
+    strike_norm  =  S.*data_week_tmp(:,3)./data_week_tmp(:,4);
+    
+    interFunc = scatteredInterpolant(strike_norm,data_week_tmp(:,2),price_week_norm,'linear','none');
+    real_data_tmp = [strike_norm,data_week_tmp(:,2),price_week_norm];
+    % VERSION 2 Convox Hull INTERPOLATION
+    gridpoints = combvec(K,Maturity)';
+    interpolatedData = interFunc(gridpoints);
+    %figure
+    %heatmap(surface_for_python);
+    %heatmap(surface_for_python2);
+    % Finding closest matrix
+    for i =1:length(data_price)
+        price_dataset = data_price(i,15:end)';
+        l2norm(i) = nanmean((price_dataset-interpolatedData).^2);
+        mape(i) =  100*nanmean(abs((price_dataset-interpolatedData)./interpolatedData));
+    end
+    [~,min_idx]= min(l2norm);
+    [~,min_idx2]= min(mape);
+    loss(j) = min(mape)
+    %figure 
+    %heatmap(reshape(data_price(min_idx,15:end),9,9)')
+    %figure 
+    %heatmap(reshape(data_price(min_idx2,15:end),9,9)')
+    filled_data = data_price(min_idx2,15:end);
+    filled_data(~isnan(interpolatedData)) = interpolatedData(~isnan(interpolatedData));
+    vola_data = blsimpv(data_vec(:, 3), data_vec(:, 1),reshape(repmat(data_price(min_idx2,6:14),9,1),81,1), data_vec(:, 2)/252,filled_data')';
+    rates(j-1,:) = data_price(min_idx2,6:14);
+    data_vola(j-1,:,:) = reshape(vola_data,9,9)';
+    data_3(j-1,:,:) = reshape(filled_data,9,9)';
+    %figure 
+    %heatmap(reshape(filled_dat,9,9)');    
+    mv_idx = reshape(isnan(interpolatedData),9,9)';
+    surface_forNN = cat(3,reshape(interpolatedData,9,9)',mv_idx);
+    data_1(j-1,:,:) = surface_for_python;
+    data_2(j-1,:,:,:) = surface_forNN;
+end
+%save("2010_interpolatedgrid_full.mat","data_1");
+save("2010_interpolatedgrid_mv_convexhull.mat","data_2");
+save("2010_interpolatedgrid_filledvalues_convexhull.mat","data_3","rates","data_vola");

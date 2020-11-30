@@ -20,8 +20,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %parpool(10);
 clearvars; clc;close all;
-%id =  java.util.UUID.randomUUID;id = char(id.toString);id=convertCharsToStrings(id([1:8,10:13,15:18]));
-id = "SmallGrid";
+id =  java.util.UUID.randomUUID;id = char(id.toString);id=convertCharsToStrings(id([1:8,10:13,15:18]));
+id = strcat("SmallGrid",id);%int2str(randi(9,1,1)),int2str(randi(9,1,1)),int2str(randi(9,1,1)),int2str(randi(9,1,1)));
+
 %% Initialisation
 
 % Configuration of underlying data
@@ -45,8 +46,8 @@ end
 if scenario_cleaner
     disp('Extreme scenarios in the underlying data are filtered out.')
 end
-Maturity        = [9,15,22,30,50,80,110,140,170];%10:30:250
-Moneyness       = 1.1:-0.025:0.9;
+Maturity        = [8,12,17,23,30,40:30:250];%10:30:250
+Moneyness       = 1.1:-0.020:0.9;
 K               = 1./Moneyness;
 S               = 2000;%1;
 K               = K*S;
