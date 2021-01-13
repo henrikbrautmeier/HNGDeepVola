@@ -5,8 +5,8 @@ rng(42)
 load id_Moneyness_SmallGrid_data_price_norm_70387_bigprice.mat
 x_clean = scaledata(data_price(:,15:end),0,1);
 y_clean = scaledata(data_price(:,1:5),0,1);
-N1=min(min(data_price(1213,15:end)));                 % save for denormalization
-N2=max(max(data_price(1213,15:end)));                 % save for denormalization
+N1=min(min(data_price(:,15:end)));                 % save for denormalization
+N2=max(max(data_price(:,15:end)));                 % save for denormalization
 
 N = size(x_clean,1);
 n_rep = 1;%500;
@@ -43,7 +43,7 @@ A=x_mv;             % Inputs
 B=x;               % Targets
 
 %% define Options
-Opts.number_neurons= 700;     % Maximam number of neurons 
+Opts.number_neurons= 70;     % Maximam number of neurons 
 Opts.Tr_ratio=0.99;            % training ratio
 Opts.Bn=1;                  % 1 to encode  lables into binary representations if it is necessary
 sigmoid = @(x)1./(1+exp(-x));
@@ -62,8 +62,10 @@ x=scaledata(x,N1,N2);
 output2(:,idx_order)=output;
 x2(:,idx_order)=x;
 mape2 =reshape(100*mean(abs((output2-x2)./x2),1),9,9)';
+mape2 =reshape(100*mean(abs((net.Yput2-x)./x),1),9,9)';
+
 mape =reshape(100*mean(abs((output-x)./x),1),9,9)';
-mae =reshape(mean(abs(output-x),1),9,9)';
+mae =reshape(mean(abs(output-x)),9,9)';
 M = logical(M);
 O = logical(O);
 mape_m = nan(size(output));

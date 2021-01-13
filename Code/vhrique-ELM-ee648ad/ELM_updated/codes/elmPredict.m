@@ -10,7 +10,6 @@ function [output]=elmPredict(net,samples)
     %%%%    last update:    03/09/2019.day/month/year
 %% get options
 number_neurons=net.Opts.number_neurons; % get number of neurons
-ELM_Type=net.Opts.ELM_Type;             % get Application Type
 Bn=net.Opts.Bn;                         % transform lables into binary codes
 N1=net.min;                             % get denormalizing values
 N2=net.max;
@@ -18,12 +17,12 @@ N2=net.max;
 input_weights=net.IW;
 num_runs = net.num_runs;
 B=net.OW;
-%% normalization
-samples=scaledata(samples,0,1);
 output=[];
+%samples=[ones(size(samples,1),1),samples];
 for i =1:num_runs
     %% Activation
-    H=radbas(input_weights{i}*samples');
+    H=net.activation(input_weights{i}*samples');
+    H=[ones(1,size(H,2));H];
     %% output
     if i==1
         output =(H' * B{i}) ;
@@ -31,15 +30,7 @@ for i =1:num_runs
         output=output+(H' * B{i}) ;
     end
 end
-output=output/num_runs;
+output=output/num_runs;%-repmat(net.Ymean,size(output,1),1);
 %% Adjusting the output according to initial conditions
-if ELM_Type=='Regrs'
 output=scaledata(output,N1,N2);               % denormalization
-else
-    if Bn==1
-    output=round(scaledata(output,0,1));      % adjust outputs normalization
-    else
-    output=round(scaledata(output,N1,N2));    % adjust outputs normalization
-    end
-end
 end
