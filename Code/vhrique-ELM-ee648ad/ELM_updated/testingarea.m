@@ -1,0 +1,65 @@
+% Missing Value Handle with GMM-ELM method
+% Gaussian Mixture Implementation
+clc;clearvars
+rng(42)
+load id_Moneyness_SmallGrid_data_price_norm_70387_bigprice.mat
+x_clean = data_price(1:100,15:end);
+y_clean = data_price(1:100,1:5);
+N = size(x_clean,1);
+n_rep = 1;%500;
+x = zeros(n_rep*N,size(x_clean,2));
+y = zeros(n_rep*N,size(y_clean,2));
+x_mv = zeros(n_rep*N,size(x_clean,2));%-999*ones(n_rep*N,size(x_clean,2));
+O =  zeros(n_rep*N,size(x_clean,2));
+M =  zeros(n_rep*N,size(x_clean,2));
+random_order = 0;%1;
+counter = 0;
+idx_order = randperm(81);
+for i =1:N
+    for j=1:n_rep
+        counter = counter+1;
+        x(n_rep*(i-1)+j,:)  = x_clean(i,:);
+        y(n_rep*(i-1)+j,:) = y_clean(i,:);
+        num_mv = randi([10,40]);
+        idx = randperm(81);
+        idx_mv = sort(idx(1:num_mv));
+        idx_keep = sort(idx(num_mv+1:end));
+        x_mv(counter,idx_keep) =x(counter,idx_keep);
+        O(counter,idx_keep) = ones(size(idx_keep));
+        M(counter,idx_mv) = ones(size(idx_mv));
+        if random_order
+            x(counter,:) = x(counter,idx_order);
+            x_mv(counter,:) = x_mv(counter,idx_order);
+            O(counter,:) = O(counter,idx_order);
+            M(counter,:) = M(counter,idx_order);
+        end
+    end
+
+end
+A=x_mv;             % Inputs
+B=x;               % Targets
+
+%% define Options
+Opts.ELM_Type='Regrs';      % 'Class' for classification and 'Regrs' for regression
+Opts.number_neurons= 50;     % Maximam number of neurons 
+Opts.Tr_ratio=0.99;            % training ratio
+Opts.Bn=1;                  % 1 to encode  lables into binary representations if it is necessary
+Opts.activation =@(x) radbas(x);                            
+Opts.number_runs =100;
+%% Training
+[net]= ELM_test(A,B,Opts);
+%% prediction
+[output]=elmPredict(net,A);
+output2(:,idx_order)=output;
+x2(:,idx_order)=x;
+mape2 =reshape(100*mean(abs((output2-x2)./x2),1),9,9)';
+mape =reshape(100*mean(abs((output-x)./x),1),9,9)';
+mae =reshape(mean(abs(output-x)),9,9)';
+M = logical(M);
+O = logical(O);
+mape_m = nan(size(output));
+mape_m(M) =abs((output(M)-x(M))./x(M));
+mape_m =100*reshape(nanmean(mape_m),9,9)';
+mape_o = nan(size(output));
+mape_o(O) =abs((output(O)-x(O))./x(O));
+mape_o =100*reshape(nanmean(mape_o),9,9)';
