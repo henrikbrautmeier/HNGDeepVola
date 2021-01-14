@@ -1,12 +1,12 @@
-% Missing Value Handle with GMM-ELM method
-% Gaussian Mixture Implementation
+%ELM 
 clc;clearvars
 rng(42)
 load id_Moneyness_SmallGrid_data_price_norm_70387_bigprice.mat
-x_clean = scaledata(data_price(:,15:end),0,1);
-y_clean = scaledata(data_price(:,1:5),0,1);
-N1=min(min(data_price(:,15:end)));                 % save for denormalization
-N2=max(max(data_price(:,15:end)));                 % save for denormalization
+sample_idx = 1:100;
+x_clean = scaledata(data_price(sample_idx,15:end),0,1);
+y_clean = scaledata(data_price(sample_idx,1:5),0,1);
+N1=min(min(data_price(sample_idx,15:end)));                 % save for denormalization
+N2=max(max(data_price(sample_idx,15:end)));                 % save for denormalization
 
 N = size(x_clean,1);
 n_rep = 1;%500; %number of MV copies per surface
@@ -46,8 +46,6 @@ B=x;               % Targets
 
 %% define Options
 Opts.number_neurons= 70;     % Maximam number of neurons 
-Opts.Tr_ratio=0.99;            % training ratio
-Opts.Bn=1;                  % 1 to encode  lables into binary representations if it is necessary
 sigmoid = @(x)1./(1+exp(-x));
 Opts.activation =@(x) radbas(x);                            
 Opts.number_runs =100; %number of random repititions
@@ -56,24 +54,4 @@ Opts.N2 =N2;
 Opts.norm =2; %2 normtype
 %% Training
 [net]= ELM_short(A,B,Opts);%ELM_test(A,B,Opts);
-%% prediction
-[output]=elmPredict(net,A);
-
-% ANALYSIS
-%O =logical(O);
-%output(O) = x(O);
-x=scaledata(x,N1,N2);
-output2(:,idx_order)=output;
-x2(:,idx_order)=x;
-mape_ind= mean(abs((output-x)./x),2);
-mape2 =reshape(100*mean(abs((output2-x2)./x2),1),9,9)';
-mape =reshape(100*mean(abs((output-x)./x),1),9,9)';
-mae =reshape(mean(abs(output-x),1),9,9)';
-M = logical(M);
-O = logical(O);
-mape_m = nan(size(output));
-mape_m(M) =abs((output(M)-x(M))./x(M));
-mape_m =100*reshape(nanmean(mape_m),9,9)';
-mape_o = nan(size(output));
-mape_o(O) =abs((output(O)-x(O))./x(O));
-mape_o =100*reshape(nanmean(mape_o),9,9)';
+MAPE = net.mape;
