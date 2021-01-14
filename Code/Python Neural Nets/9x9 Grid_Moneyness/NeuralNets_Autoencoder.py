@@ -433,18 +433,53 @@ history2_calib2 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_siz
 NNcalibrationP2.compile(loss =log_constraint(param=0.02,p2=15), optimizer = Adam(learning_rate=1e-4,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
 history2_calib3 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
 NNcalibrationP2.compile(loss =log_constraint(param=0.005,p2=15), optimizer = Adam(learning_rate=1e-4,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
-history2_calib4 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
-NNcalibrationP2.compile(loss =log_constraint(param=0.0005,p2=15), optimizer = Adam(learning_rate=1e-4,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
-history2_calib5 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
-NNcalibrationP2.compile(loss =log_constraint(param=0.0002,p2=15), optimizer = Adam(learning_rate=5e-5,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
-history2_calib6 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
-NNcalibrationP2.compile(loss =log_constraint(param=0.00015,p2=15), optimizer = Adam(learning_rate=5e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
-history2_calib7 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
-NNcalibrationP2.compile(loss =log_constraint(param=0.00005,p2=15), optimizer = Adam(learning_rate=2e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
-history2_calib8 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=2000, verbose = True, shuffle=1,callbacks =[es])
+history2_calib4 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.005,p2=15), optimizer = Adam(learning_rate=5e-5,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib5 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.002,p2=15), optimizer = Adam(learning_rate=1e-5,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib6 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.001,p2=15), optimizer = Adam(learning_rate=9e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib7 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.0006,p2=15), optimizer = Adam(learning_rate=5e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.0006,p2=15), optimizer = Adam(learning_rate=1e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationP2.compile(loss =log_constraint(param=0.0006,p2=20), optimizer = Adam(learning_rate=1e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationP2.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', verbose=1,patience = 10 ,restore_best_weights=True)
+NNcalibrationP2.save_weights("calibration_weights_P2.h5")
 
-
-prediction_calibration1 = NNcalibrationP.predict(input_test[0])
+prediction_calibration1 = NNcalibrationP2.predict(input_test[0])
 prediction_invtrafo1= np.array([myinverse(x) for x in prediction_calibration1])
 error,err1,err2,vio_error,vio_error2,c,c2,testing_violation,testing_violation2,bad_scenarios = calibration_plotter(prediction_invtrafo1,np.array([myinverse(x) for x in outputs_test[1]]))
-summary_calibration = 100*np.asarray([np.quantile(error,0.05,axis=0),np.quantile(error,0.25,axis=0),np.median(error,axis=0),np.mean(error,axis=0),np.quantile(error,0.75,axis=0),np.quantile(error,0.95,axis=0),np.max(error,axis=0)])
+summary_calibration2 = np.asarray([np.quantile(error,0.05,axis=0),np.quantile(error,0.25,axis=0),np.median(error,axis=0),np.mean(error,axis=0),np.quantile(error,0.75,axis=0),np.quantile(error,0.95,axis=0),np.max(error,axis=0)])
+
+path = "C:/Users/Henrik/Documents/GitHub/HNGDeepVola/Code/Python Neural Nets/9x9 Grid_Moneyness/"
+mat         = scipy.io.loadmat(path+"2010_interpolatedgrid_filledvalues.mat")
+surfaces_interpolated   = mat['data_3'].reshape(50,9,9,1)
+surfaces_vola   = mat['data_vola']
+rates_interpolation  = mat['rates']
+rates_interpolation_net  = [npm.repmat(rates_interpolation[i,:].reshape((9,1)),1,9) for i in range(50)]
+rates_interpolation_net = np.asarray(rates_interpolation_net).reshape(50,9,9)
+calib_realdata = surfaces_interpolated
+params_forecasts = NNcalibrationP2.predict(calib_realdata)
+params_forecasts= np.array([myinverse(x) for x in params_forecasts])
+dict_calib_real ={"interpolated_surface": surfaces_interpolated.reshape(50,9,9,1), "params_calib" : params_forecasts, "rates_calib": rates_interpolation }
+scipy.io.savemat('data_calib_real.mat', dict_calib_real)
+
+#
+path = "C:/Users/Henrik/Documents/GitHub/HNGDeepVola/Code/Python Neural Nets/9x9 Grid_Moneyness/"
+mat         = scipy.io.loadmat(path+"2010_interpolatedgrid_filledvalues_convexhull.mat")
+surfaces_interpolated   = mat['data_3'].reshape(50,9,9,1)
+surfaces_vola   = mat['data_vola']
+rates_interpolation  = mat['rates']
+rates_interpolation_net  = [npm.repmat(rates_interpolation[i,:].reshape((9,1)),1,9) for i in range(50)]
+rates_interpolation_net = np.asarray(rates_interpolation_net).reshape(50,9,9)
+calib_realdata = surfaces_interpolated
+params_forecasts = NNcalibrationP2.predict(calib_realdata)
+params_forecasts= np.array([myinverse(x) for x in params_forecasts])
+dict_calib_real ={"interpolated_surface": surfaces_interpolated.reshape(50,9,9,1), "params_calib" : params_forecasts, "rates_calib": rates_interpolation }
+scipy.io.savemat('data_calib_real_convexhull.mat', dict_calib_real)
+
+#
+

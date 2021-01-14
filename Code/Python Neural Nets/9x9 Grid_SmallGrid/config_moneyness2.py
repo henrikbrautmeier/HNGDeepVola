@@ -21,9 +21,9 @@ path = "C:/Users/Henrik/Documents/GitHub/HNGDeepVola/Code/Python Neural Nets/9x9
 #name_price = "Moneyness_price_norm_81509_1e-2.mat"
 #name_vola  = "Moneyness_vola_norm_81509_1e-2.mat"
 #name_vega  = "Moneyness_vega_norm_81509_1e-2.mat"
-name_price = "id_Moneyness_SmallGrid_data_price_norm_70387_bigprice.mat"
-name_vola  = "id_Moneyness_SmallGrid_data_vola_norm_70387_bigprice.mat"
-name_vega  = "id_Moneyness_SmallGrid_data_vega_norm_70387_bigprice.mat"
+name_price = "Moneyness_price_norm_314344.mat"
+name_vola  = "Moneyness_vola_norm_314344.mat"
+name_vega  = "Moneyness_vega_norm_314344.mat"
 
 mat         = scipy.io.loadmat(path+name_vola)
 data_vola   = mat['data_vola']
@@ -36,7 +36,7 @@ vega        = mat['data_vega']
 ### Initialisation
 S0              = 2000
 Nparameters     = 5
-maturities      = np.array([9,15,22,30,50,80,110,140,170])
+maturities      = np.array([8,12,17,23,30,60,90,140,170])
 moneyness       = np.array([1.1, 1.075, 1.05, 1.025, 1, 0.975, 0.95, 0.925, 0.9])
 strikes         = 1/moneyness
 Nstrikes        = len(strikes)   

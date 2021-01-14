@@ -173,8 +173,7 @@ NNprice_Intrinsic.load_weights("intrinsic_price_rrmse_weights_1net_2000_moneynes
 #NNprice_Intrinsic.load_weights("intrinsic_price_mse_weights_1net_2000_moneynesss.h5")
 
 # Results
-prediction_intrinsic  = intrinsic_net[idx_test,:,:]+intrinsicInverse(NNprice_Intrinsic.predict(input_test).reshape((Ntest,Nmaturities,Nstrikes)),0)
-price_test           = price_1[idx_test,:,:]
+20price_test           = price_1[idx_test,:,:]
 vega_test            = vega_1[idx_test,:,:]
 err_rel_mat,err_mat,err_optll,err_iv_approx,tmp,tmp= pricing_plotter(prediction_intrinsic,price_test,vega_test)
 idx_high = np.zeros((Ntest,1))
@@ -526,11 +525,13 @@ history_calib7 = NNcalibrationP.fit(input_train,parameters_trafo[idx_train,:], b
 NNcalibrationP.compile(loss =log_constraint(param=0.00005,p2=15), optimizer = Adam(learning_rate=2e-6),metrics=["MAPE", "MSE",miss_count])
 history_calib8 = NNcalibrationP.fit(input_train,parameters_trafo[idx_train,:], batch_size=250, validation_data = (input_val,parameters_trafo[idx_val,:]), epochs=2000, verbose = True, shuffle=1,callbacks =[es])
 NNcalibrationP.save_weights("calibrationweights_Price.h5")
+NNcalibrationP.load_weights("calibrationweights_Price.h5")
 
 
-prediction_calibration1 = NNcalibration.predict(input_test)
+prediction_calibration1 = NNcalibrationP.predict(input_test)
 prediction_invtrafo1= np.array([myinverse(x) for x in prediction_calibration1])
-error,err1,err2,vio_error,vio_error2,c,c2,testing_violation,testing_violation2,bad_scenarios = calibration_plotter(prediction_calibration1,parameters_trafo[idx_test,:],parameters[idx_test,:])
+error,err1,err2,vio_error,vio_error2,c,c2,testing_violation,testing_violation2,bad_scenarios = calibration_plotter(prediction_calibration1,parameters[idx_test,:])
+summary_calibration = 100*np.asarray([np.quantile(error,0.05,axis=0),np.quantile(error,0.25,axis=0),np.median(error,axis=0),np.mean(error,axis=0),np.quantile(error,0.75,axis=0),np.quantile(error,0.95,axis=0),np.max(error,axis=0)])
 
 
 
@@ -743,7 +744,9 @@ calib_realdata = np.concatenate((price_surface.reshape(50,9,9,1),surfaces_vola.r
 params_forecasts = NNcalibration.predict(calib_realdata)
 params_forecasts= np.array([myinverse(x) for x in params_forecasts])
 
-forecasts_real = NNprice
+dict_calib_real ={"interpolated_surface": surfaces_interpolated.reshape(50,9,9,1), "params_calib" : params_forecasts, "rates_calib": rates_interpolation }
+scipy.io.savemat('data_calib_real_full.mat', dict_calib_real)
+
 #
 # In[Surface to Surface Autoencoder]
 input_test = np.concatenate((prediction_calibration1,rates[idx_test,:]),axis=1).reshape((Ntest,Nparameters+Nmaturities,1,1))
@@ -770,7 +773,7 @@ error,err1,err2,vio_error,vio_error2,c,c2,testing_violation,testing_violation2,b
 
 n1 = 30000
 n2 = 500
-"""
+
 mv_x_train_set = np.zeros((n1*n2,9,9,3))
 mv_y_train_set = np.zeros((n1*n2,9,9,1))
 #mv_x_train_set = []
@@ -793,9 +796,6 @@ for i in range(n1):
         mv_x_train_set[idx,:,:,:] = tmp
         mv_y_train_set[idx,:,:,:] = tmp2
         idx +=1
-"""
-np.load('/mv_x_train.npy')
-np.load('/mv_y_train.npy')
 
 Im2Im  = Sequential()       
 Im2Im.add(InputLayer(input_shape=(9,9,3,)))
@@ -811,6 +811,148 @@ Im2Im.add(Conv2D(1, (2, 2),padding='valid',use_bias =True,strides =(1,1),activat
 Im2Im.summary()
 es_im2im = EarlyStopping(monitor='val_loss', mode='min', verbose=1,patience = 5 ,restore_best_weights=True)
 Im2Im.compile(loss = "MSE", optimizer = Adam(learning_rate=1e-3),metrics=["MAPE"])
+Im2Im_history = Im2Im.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:], mv_y_train_set[:int(0.8*n1*n2),:,:,:], batch_size=2500, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:], mv_y_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:]),epochs =50, verbose = True,callbacks =[es_im2im], use_multiprocessing=True,workers=50)
+#Im2Im.save_weights("missing_value_network_mse.h5")
+Im2Im.load_weights("missing_value_network_mse.h5")
+#Im2Im.compile(loss = root_relative_mean_squared_error, optimizer = Adam(learning_rate=1e-2),metrics=["MAPE","MSE"])
+#Im2Im_history = Im2Im.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:], mv_y_train_set[:int(0.8*n1*n2),:,:,:], batch_size=5000, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:], mv_y_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:]),epochs =50, verbose = True,callbacks =[es_im2im], use_multiprocessing=True,workers=50)
+#Im2Im.save_weights("missing_value_network_relmse.h5")
+prediction_Im2Im  = Im2Im.predict(mv_x_train_set[int(0.9*n1*n2):,:,:,:]).reshape((int(n1*n2*0.1),Nmaturities,Nstrikes))
+
+vola_plotter(prediction_Im2Im,mv_y_train_set[int(0.9*n1*n2):,:,:,:].reshape((int(n1*n2*0.1),Nmaturities,Nstrikes)))
+
+# In[MissingValueNetwork]:
+
+n1 = 30000
+n2 = 500
+
+mv_x_train_set = np.zeros((n1*n2,9,9,3))
+mv_y_train_set = np.zeros((n1*n2,9,9,1))
+mv_parameters = np.zeros((n1*n2,5))
+#mv_x_train_set = []
+#mv_y_train_set = []
+idx = 0
+basic_0 = np.zeros((9,9,1))
+price_reshape = price_1.reshape((Ntotal,9,9,1))
+for i in range(n1):
+    if i%500==0:
+        print(i)
+    tmp2 = price_reshape[i,:,:,:]
+    for j in range(n2):
+        count_mv = np.random.randint(15,50)
+        tmp = np.concatenate((tmp2,basic_0,rates_net[i,:,:].reshape(9,9,1)),axis=2)
+        for k in range(count_mv):
+            pos1 = np.random.randint(0,9)
+            pos2 = np.random.randint(0,9)
+            tmp[pos1,pos2,0] = -999
+            tmp[pos1,pos2,1] = 1    
+        mv_x_train_set[idx,:,:,:] = tmp
+        mv_y_train_set[idx,:,:,:] = tmp2
+        mv_parameters[idx,:] = parameters_trafo[i,:]
+        idx +=1
+
+NNcalibrationMV = Sequential() 
+NNcalibrationMV.add(InputLayer(input_shape=(Nmaturities,Nstrikes,3)))
+NNcalibrationMV.add(ZeroPadding2D(padding=(1,1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True, padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True, padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(ZeroPadding2D(padding=(1,1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(ZeroPadding2D(padding=(2,2)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(ZeroPadding2D(padding=(2,2)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Conv2D(64,(2, 2),use_bias= True,padding='valid',strides =(1,1),activation =sig_scaled(2,1,0,-1)))
+NNcalibrationMV.add(Flatten())
+NNcalibrationMV.add(Dense(Nparameters,activation = sig_scaled(2,1,0,-1),use_bias=True))
+NNcalibrationMV.summary()
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', verbose=1,patience = 10 ,restore_best_weights=True)
+NNcalibrationMV.compile(loss =log_constraint(param=1,p2=15), optimizer =  Adam(clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib1 = NNcalibrationMV.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:],mv_parameters[:int(0.8*n1*n2),:], batch_size=2500, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:],mv_parameters[int(0.8*n1*n2):int(0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.5,p2=15), optimizer =  Adam(clipvalue=10,learning_rate=1e-4,),metrics=["MAPE", "MSE",miss_count])
+history2_calib2 = NNcalibrationMV.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:],mv_parameters[:int(0.8*n1*n2),:], batch_size=2500, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:],mv_parameters[int(0.8*n1*n2):int(0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.1,p2=15), optimizer =  Adam(clipvalue=10,learning_rate=5e-5,),metrics=["MAPE", "MSE",miss_count])
+history2_calib3 = NNcalibrationMV.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:],mv_parameters[:int(0.8*n1*n2),:], batch_size=2500, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:],mv_parameters[int(0.8*n1*n2):int(0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+
+prediction_Mv = NNcalibrationMV.predict(mv_x_train_set[int(0.9*n1*n2):,:,:,:])
+prediction_invtrafo1= np.array([myinverse(x) for x in prediction_Mv])
+error = calibration_plotter(prediction_invtrafo1,np.array([myinverse(x) for x in mv_parameters[int(0.9*n1*n2):,:]]))
+error = error[0]
+summary_calibrationMV = np.asarray([np.quantile(error,0.05,axis=0),np.quantile(error,0.25,axis=0),np.median(error,axis=0),np.mean(error,axis=0),np.quantile(error,0.75,axis=0),np.quantile(error,0.95,axis=0),np.max(error,axis=0)])
+dict_calib_MV30000 ={"results": summary_calibrationMV}
+scipy.io.savemat('dict_calib_MV30000.mat', dict_calib_MV30000)
+
+
+mv_x_train_set2 = np.zeros((2*n1*n2,9,9,3))
+mv_y_train_set2 = np.zeros((2*n1*n2,9,9,1))
+mv_parameters2 = np.zeros((2*n1*n2,5))
+mv_x_train_set2[:n1*n2,:,:,:] = mv_x_train_set
+mv_y_train_set2[:n1*n2,:,:,:] = mv_y_train_set
+mv_parameters2[:n1*n2,:] = mv_parameters
+for i in range(n1,2*n1):
+    if i%500==0:
+        print(i)
+    tmp2 = price_reshape[i,:,:,:]
+    for j in range(n2):
+        count_mv = np.random.randint(15,50)
+        tmp = np.concatenate((tmp2,basic_0,rates_net[i,:,:].reshape(9,9,1)),axis=2)
+        for k in range(count_mv):
+            pos1 = np.random.randint(0,9)
+            pos2 = np.random.randint(0,9)
+            tmp[pos1,pos2,0] = -999
+            tmp[pos1,pos2,1] = 1    
+        mv_x_train_set2[idx,:,:,:] = tmp
+        mv_y_train_set2[idx,:,:,:] = tmp2
+        mv_parameters2[idx,:] = parameters_trafo[i,:]
+        idx +=1
+
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', verbose=1,patience = 10 ,restore_best_weights=True)
+NNcalibrationMV.compile(loss =log_constraint(param=1,p2=15), optimizer =  Adam(clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib1 = NNcalibrationMV.fit(mv_x_train_set2[:int(0.8*2*n1*n2),:,:,:],mv_parameters2[:int(2*0.8*n1*n2),:], batch_size=5000, validation_data = (mv_x_train_set2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:,:,:],mv_parameters2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+
+
+
+NNcalibrationMV.compile(loss =log_constraint(param=0.5,p2=15), optimizer =  Adam(clipvalue=10,learning_rate=1e-4,),metrics=["MAPE", "MSE",miss_count])
+history2_calib2 = NNcalibrationMV.fit(mv_x_train_set2[:int(2*0.8*n1*n2),:,:,:],mv_parameters2[:int(2*0.8*n1*n2),:], batch_size=2500, validation_data = (mv_x_train_set2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:,:,:],mv_parameters2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.1,p2=15), optimizer =  Adam(clipvalue=10,learning_rate=5e-5,),metrics=["MAPE", "MSE",miss_count])
+history2_calib3 = NNcalibrationMV.fit(mv_x_train_set2[:int(2*0.8*n1*n2),:,:,:],mv_parameters2[:int(2*0.8*n1*n2),:], batch_size=2500, validation_data = (mv_x_train_set2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:,:,:],mv_parameters2[int(2*0.8*n1*n2):int(2*0.9*n1*n2),:]), epochs=50, verbose = True, shuffle=1,callbacks =[es])
+
+
+
+NNcalibrationMV.compile(loss =log_constraint(param=0.1,p2=15), optimizer =  Adam(clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib2 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.02,p2=15), optimizer = Adam(learning_rate=1e-4,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib3 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=5, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.005,p2=15), optimizer = Adam(learning_rate=1e-4,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib4 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.005,p2=15), optimizer = Adam(learning_rate=5e-5,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib5 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.002,p2=15), optimizer = Adam(learning_rate=1e-5,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib6 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.001,p2=15), optimizer = Adam(learning_rate=9e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib7 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.0006,p2=15), optimizer = Adam(learning_rate=5e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.0006,p2=15), optimizer = Adam(learning_rate=1e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+NNcalibrationMV.compile(loss =log_constraint(param=0.0006,p2=20), optimizer = Adam(learning_rate=1e-6,clipvalue=10),metrics=["MAPE", "MSE",miss_count])
+history2_calib8 = NNcalibrationMV.fit(input_train[0],outputs_train[1], batch_size=250, validation_data = (input_val[0],outputs_val[1]), epochs=1000, verbose = True, shuffle=1,callbacks =[es])
+es = EarlyStopping(monitor='val_mean_squared_error', mode='min', verbose=1,patience = 10 ,restore_best_weights=True)
+NNcalibrationMV.save_weights("calibration_weights_MV.h5")
 Im2Im_history = Im2Im.fit(mv_x_train_set[:int(0.8*n1*n2),:,:,:], mv_y_train_set[:int(0.8*n1*n2),:,:,:], batch_size=2500, validation_data = (mv_x_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:], mv_y_train_set[int(0.8*n1*n2):int(0.9*n1*n2),:,:,:]),epochs =50, verbose = True,callbacks =[es_im2im], use_multiprocessing=True,workers=50)
 #Im2Im.save_weights("missing_value_network_mse.h5")
 Im2Im.load_weights("missing_value_network_mse.h5")

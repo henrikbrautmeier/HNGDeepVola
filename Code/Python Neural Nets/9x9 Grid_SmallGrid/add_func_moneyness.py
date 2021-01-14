@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 #import random
 # import custom functions #scaling tools
-from config_moneyness import myinverse
-from config_moneyness import ub,lb
-from config_moneyness import maturities,Nmaturities,Nstrikes,moneyness,Nparameters,strikes
+from config_moneyness2 import myinverse
+from config_moneyness2 import ub,lb
+from config_moneyness2 import maturities,Nmaturities,Nstrikes,moneyness,Nparameters,strikes
 
 #import matplotlib.lines as mlines
 #import matplotlib.transforms as mtransforms
